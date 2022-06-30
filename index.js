@@ -1,127 +1,123 @@
-var onPerformance = require('on-performance')
-var scheduler = require('nanoscheduler')()
-var assert = require('assert')
+const scheduler = require('@pirxpilot/nanoscheduler')()
+const assert = require('assert')
 
-module.exports = ChooHooks
+/* global PerformanceObserver */
 
-function ChooHooks (emitter) {
-  if (!(this instanceof ChooHooks)) return new ChooHooks(emitter)
+module.exports = chooHooks
 
-  assert.equal(typeof emitter, 'object')
+const HAS_PERFORMANCE = typeof window === 'object' && !!window?.performance?.getEntriesByName
 
-  this.hasWindow = typeof window !== 'undefined'
-  this.hasIdleCallback = this.hasWindow && window.requestIdleCallback
-  this.hasPerformance = this.hasWindow &&
-    window.performance &&
-    window.performance.getEntriesByName
+function chooHooks (_emitter) {
+  assert(typeof _emitter === 'object')
 
-  this.emitter = emitter
-  this.listeners = {}
-  this.buffer = {
+  const _listeners = {}
+  const _buffer = {
     render: {},
     events: {}
   }
-}
-
-ChooHooks.prototype.on = function (name, handler) {
-  this.listeners[name] = handler
-}
-
-ChooHooks.prototype.start = function () {
-  var self = this
-  if (this.hasPerformance) {
-    window.performance.onresourcetimingbufferfull = function () {
-      var listener = self.listeners['resource-timing-buffer-full']
-      if (listener) listener()
-    }
+  return {
+    on,
+    start
   }
 
-  // TODO also handle log events
-  onPerformance(function (timing) {
-    if (!timing) return
-    if (timing.entryType !== 'measure') return
+  function on (name, handler) {
+    _listeners[name] = handler
+  }
 
-    var eventName = timing.name
-    if (/choo\.morph/.test(eventName)) {
-      self.buffer.render.morph = timing
-    } else if (/choo\.route/.test(eventName)) {
-      self.buffer.render.route = timing
-    } else if (/choo\.render/.test(eventName)) {
-      self.buffer.render.render = timing
-    } else if (/choo\.emit/.test(eventName) && !/log:/.test(eventName)) {
-      var eventListener = self.listeners['event']
-      if (eventListener) {
-        var timingName = eventName.match(/choo\.emit\('(.*)'\)/)[1]
-        if (timingName === 'render' || timingName === 'DOMContentLoaded') return
-
-        var traceId = eventName.match(/\[(\d+)\]/)[1]
-        var data = self.buffer.events[traceId]
-
-        self.buffer.events[traceId] = null
-        eventListener(timingName, data, timing)
+  function start () {
+    if (HAS_PERFORMANCE) {
+      window.performance.onresourcetimingbufferfull = () => {
+        const listener = _listeners['resource-timing-buffer-full']
+        if (listener) listener()
       }
     }
 
-    var rBuf = self.buffer.render
-    if (rBuf.render && rBuf.route && rBuf.morph) {
-      var renderListener = self.listeners['render']
-      if (!renderListener) return
-      var timings = {}
-      while (self.buffer.render.length) {
-        var _timing = self.buffer.render.pop()
-        var name = _timing.name
-        if (/choo\.render/.test(name)) timings.render = _timing
-        else if (/choo\.morph/.test(name)) timings.morph = _timing
-        else timings.route = _timing
+    const po = new PerformanceObserver(list => list.getEntries().forEach(onTiming))
+    po.observe({ type: 'measure' })
+
+    // TODO also handle log events
+    function onTiming (timing) {
+      const eventName = timing.name
+      if (/choo\.morph/.test(eventName)) {
+        _buffer.render.morph = timing
+      } else if (/choo\.route/.test(eventName)) {
+        _buffer.render.route = timing
+      } else if (/choo\.render/.test(eventName)) {
+        _buffer.render.render = timing
+      } else if (/choo\.emit/.test(eventName) && !/log:/.test(eventName)) {
+        const eventListener = _listeners.event
+        if (eventListener) {
+          const timingName = eventName.match(/choo\.emit\('(.*)'\)/)[1]
+          if (timingName === 'render' || timingName === 'DOMContentLoaded') return
+
+          const traceId = eventName.match(/\[(\d+)\]/)[1]
+          const data = _buffer.events[traceId]
+
+          _buffer.events[traceId] = null
+          eventListener(timingName, data, timing)
+        }
       }
-      rBuf.render = rBuf.route = rBuf.morph = void 0
-      renderListener(timings)
-    }
-  })
 
-  // Check if there's timings without any listeners
-  // and trigger the DOMContentLoaded event.
-  // If the timing API is not available, we handle all events here
-  this.emitter.on('*', function (eventName, data, uuid) {
-    var logLevel = /^log:(\w{4,5})/.exec(eventName)
-
-    if (!self.hasPerformance && eventName === 'render') {
-      // Render
-      var renderListener = self.listeners['render']
-      if (renderListener) renderListener()
-    } else if (eventName === 'DOMContentLoaded') {
-      // DOMContentLoaded
-      self._emitLoaded()
-    } else if (logLevel) {
-      logLevel = logLevel[1]
-      // Log:*
-      var logListener = self.listeners['log:' + logLevel]
-      if (logListener) {
-        logListener.apply(null, Array.prototype.slice.call(arguments, 0, arguments.length - 1))
+      const rBuf = _buffer.render
+      if (rBuf.render && rBuf.route && rBuf.morph) {
+        const renderListener = _listeners.render
+        if (!renderListener) return
+        const timings = {}
+        while (_buffer.render.length) {
+          const _timing = _buffer.render.pop()
+          const name = _timing.name
+          if (/choo\.render/.test(name)) timings.render = _timing
+          else if (/choo\.morph/.test(name)) timings.morph = _timing
+          else timings.route = _timing
+        }
+        rBuf.render = rBuf.route = rBuf.morph = undefined
+        renderListener(timings)
       }
-    } else if (!self.emitter.listeners(eventName).length) {
-      // Unhandled
-      var unhandledListener = self.listeners['unhandled']
-      if (unhandledListener) unhandledListener(eventName, data)
-    } else if (eventName !== 'render') {
-      // *
-      if (self.hasPerformance) self.buffer.events[uuid] = data
     }
-  })
-}
 
-// compute and log time till interactive when DOMContentLoaded event fires
-ChooHooks.prototype._emitLoaded = function () {
-  var self = this
-  scheduler.push(function clear () {
-    var listener = self.listeners['DOMContentLoaded']
-    var timing = self.hasWindow && window.performance && window.performance.timing
+    // Check if there's timings without any listeners
+    // and trigger the DOMContentLoaded event.
+    // If the timing API is not available, we handle all events here
+    this.emitter.on('*', function (eventName, data, uuid) {
+      let logLevel = /^log:(\w{4,5})/.exec(eventName)
 
-    if (listener && timing) {
-      listener({
-        interactive: timing.domInteractive - timing.navigationStart,
-        loaded: timing.domContentLoadedEventEnd - timing.navigationStart
-      })
-    }
-  })
+      if (!HAS_PERFORMANCE && eventName === 'render') {
+        // Render
+        const renderListener = _listeners.render
+        if (renderListener) renderListener()
+      } else if (eventName === 'DOMContentLoaded') {
+        // DOMContentLoaded
+        _emitLoaded()
+      } else if (logLevel) {
+        logLevel = logLevel[1]
+        // Log:*
+        const logListener = _listeners[`log:${logLevel}`]
+        if (logListener) {
+          logListener(...Array.prototype.slice.call(arguments, 0, arguments.length - 1))
+        }
+      } else if (!_emitter.listeners(eventName).length) {
+        // Unhandled
+        const unhandledListener = _listeners.unhandled
+        if (unhandledListener) unhandledListener(eventName, data)
+      } else if (eventName !== 'render') {
+        // *
+        if (window.performance) _buffer.events[uuid] = data
+      }
+    })
+  }
+
+  // compute and log time till interactive when DOMContentLoaded event fires
+  function _emitLoaded () {
+    scheduler.push(() => {
+      const listener = _listeners.DOMContentLoaded
+      const timing = window.performance.timing
+
+      if (listener && timing) {
+        listener({
+          interactive: timing.domInteractive - timing.navigationStart,
+          loaded: timing.domContentLoadedEventEnd - timing.navigationStart
+        })
+      }
+    })
+  }
 }
