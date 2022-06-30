@@ -78,7 +78,7 @@ function chooHooks (_emitter) {
     // Check if there's timings without any listeners
     // and trigger the DOMContentLoaded event.
     // If the timing API is not available, we handle all events here
-    this.emitter.on('*', function (eventName, data, uuid) {
+    _emitter.on('*', function (eventName, data, uuid) {
       let logLevel = /^log:(\w{4,5})/.exec(eventName)
 
       if (!HAS_PERFORMANCE && eventName === 'render') {
