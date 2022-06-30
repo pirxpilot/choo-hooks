@@ -1,6 +1,7 @@
-const onPerformance = require('on-performance')
-const scheduler = require('nanoscheduler')()
+const scheduler = require('@pirxpilot/nanoscheduler')()
 const assert = require('assert')
+
+/* global PerformanceObserver */
 
 module.exports = chooHooks
 
@@ -31,11 +32,11 @@ function chooHooks (_emitter) {
       }
     }
 
-    // TODO also handle log events
-    onPerformance(timing => {
-      if (!timing) return
-      if (timing.entryType !== 'measure') return
+    const po = new PerformanceObserver(list => list.getEntries().forEach(onTiming))
+    po.observe({ type: 'measure' })
 
+    // TODO also handle log events
+    function onTiming (timing) {
       const eventName = timing.name
       if (/choo\.morph/.test(eventName)) {
         _buffer.render.morph = timing
@@ -72,7 +73,7 @@ function chooHooks (_emitter) {
         rBuf.render = rBuf.route = rBuf.morph = undefined
         renderListener(timings)
       }
-    })
+    }
 
     // Check if there's timings without any listeners
     // and trigger the DOMContentLoaded event.

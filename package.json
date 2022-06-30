@@ -7,11 +7,14 @@
     "test": "standard"
   },
   "dependencies": {
-    "nanoscheduler": "^1.0.0",
-    "on-performance": "^1.0.1"
+    "@pirxpilot/nanoassert": "^1.0.0",
+    "@pirxpilot/nanoscheduler": "^1.0.0"
   },
   "devDependencies": {
     "standard": "~17"
+  },
+  "browser": {
+    "assert": "@pirxpilot/nanoassert"
   },
   "keywords": [
     "choo",
