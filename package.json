@@ -2,7 +2,7 @@
   "name": "@pirxpilot/choo-hooks",
   "description": "Hook into Choo's events and timings",
   "repository": "pirxpilot/choo-hooks",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "scripts": {
     "test": "standard"
   },
