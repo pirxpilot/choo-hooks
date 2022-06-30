@@ -1,7 +1,10 @@
-# choo-hooks [![stability][0]][1]
-[![npm version][2]][3] [![build status][4]][5]
-[![downloads][8]][9] [![js-standard-style][10]][11]
+[![NPM version][npm-image]][npm-url]
+[![Build Status][build-image]][build-url]
+[![Dependency Status][deps-image]][deps-url]
 
+# choo-hooks
+
+Fork of [choo-hooks].
 Hook into Choo's events and timings. Useful to create loggers, analytics and
 more.
 
@@ -58,15 +61,14 @@ Called whenever the browser's resource timing buffer has filled up.
 ## License
 [MIT](https://tldrlegal.com/license/mit-license)
 
-[0]: https://img.shields.io/badge/stability-experimental-orange.svg?style=flat-square
-[1]: https://nodejs.org/api/documentation.html#documentation_stability_index
-[2]: https://img.shields.io/npm/v/choo-hooks.svg?style=flat-square
-[3]: https://npmjs.org/package/choo-hooks
-[4]: https://img.shields.io/travis/choojs/choo-hooks/master.svg?style=flat-square
-[5]: https://travis-ci.org/choojs/choo-hooks
-[6]: https://img.shields.io/codecov/c/github/choojs/choo-hooks/master.svg?style=flat-square
-[7]: https://codecov.io/github/choojs/choo-hooks
-[8]: http://img.shields.io/npm/dm/choo-hooks.svg?style=flat-square
-[9]: https://npmjs.org/package/choo-hooks
-[10]: https://img.shields.io/badge/code%20style-standard-brightgreen.svg?style=flat-square
-[11]: https://github.com/feross/standard
+
+[choo-hooks]: https://npmjs.org/package/choo-hooks
+
+[npm-image]: https://img.shields.io/npm/v/@pirxpilot/choo-hooks
+[npm-url]: https://npmjs.org/package/@pirxpilot/choo-hooks
+
+[build-url]: https://github.com/pirxpilot/choo-hooks/actions/workflows/check.yaml
+[build-image]: https://img.shields.io/github/workflow/status/pirxpilot/choo-hooks/check
+
+[deps-image]: https://img.shields.io/librariesio/release/npm/@pirxpilot/choo-hooks
+[deps-url]: https://libraries.io/npm/@pirxpilot%2Fchoo-hooks
